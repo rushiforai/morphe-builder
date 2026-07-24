@@ -678,6 +678,15 @@ get_apk_auto() {
 		return 1
 	fi
 
+	if [[ "$arch" == "all" ]]; then
+		local lib_arches
+		lib_arches=$(unzip -Z1 "./download/$apk_name.apk" 2>/dev/null | sed -n 's#^lib/\([^/]*\)/.*#\1#p' | sort -u | tr '\n' ' ')
+		if [[ -n "$lib_arches" && "$lib_arches" != *"arm64-v8a"* && "$lib_arches" != *"armeabi-v7a"* ]]; then
+			red_log "[-] Unsupported APK architecture only: $lib_arches"
+			return 1
+		fi
+	fi
+
 	if [[ "$pkg_type" == "bundle_extract" ]]; then
 		unzip "./download/$apk_name.apk" -d "./download/$apk_name" > /dev/null 2>&1
 	fi

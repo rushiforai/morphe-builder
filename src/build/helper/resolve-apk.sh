@@ -373,9 +373,9 @@ apkmirror_search() {
 	local resp="$1" dpi="$2" arch="$3" apk_bundle="$4"
 	local dlurl="" node app_table emptyCheck
 
-	local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a')
+	local apparch=('universal' 'noarch' 'all' 'arm64-v8a + armeabi-v7a' 'arm64-v8a' 'armeabi-v7a')
 	if [ "$arch" != all ]; then
-		apparch+=("$arch")
+		apparch=("$arch")
 	fi
 
 	local appdpi=("nodpi" "anydpi")
@@ -843,6 +843,10 @@ dl_apkcombo() {
 	fi
 
 	final_url=$(normalize_apkpure_proxy_url "$final_url")
+	if grep -Eiq '(^|[-_/])(x86_64|x86)([-_/.]|$)' <<<"$final_url"; then
+		epr "APKCombo selected unsupported x86 variant: $final_url"
+		return 1
+	fi
 	pr "Downloading from APKCombo: $final_url"
 	local final_referer="$page_url"
 	[[ "$final_url" == https://download.apkpure.com/* ]] && final_referer="https://apkpure.com/"
@@ -880,6 +884,7 @@ get_uptodown_resp() {
 	if [[ "$url" == *"/android/search"* ]]; then
 		url=$(resolve_uptodown_search "$url") || return 1
 	fi
+	__UPTODOWN_BASE_URL__="${url%/}"
 	__UPTODOWN_RESP__=$(req "${url%/}/versions" -) || return 1
 	__UPTODOWN_RESP_PKG__=$(req "${url%/}/download" -) || return 1
 }
@@ -887,10 +892,11 @@ get_uptodown_vers() { $HTMLQ --text ".version" <<<"$__UPTODOWN_RESP__"; }
 dl_uptodown() {
 	local uptodown_dlurl=$1 version=$2 output=$3 arch=$4 _dpi=$5
 	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
+	uptodown_dlurl="${__UPTODOWN_BASE_URL__:-$uptodown_dlurl}"
 
-	local apparch=('arm64-v8a, armeabi-v7a, x86_64' 'arm64-v8a, armeabi-v7a, x86, x86_64' 'arm64-v8a, armeabi-v7a' 'arm64-v8a' 'armeabi-v7a' 'x86_64' 'x86')
+	local apparch=('All architectures' 'universal' 'arm64-v8a, armeabi-v7a' 'arm64-v8a' 'armeabi-v7a')
 	if [ "$arch" != all ]; then
-		apparch+=("$arch")
+		apparch=("$arch")
 	fi
 
 	local op resp data_code
