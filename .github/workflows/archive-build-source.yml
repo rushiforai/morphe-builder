@@ -11,9 +11,9 @@ on:
         default: "rushiranpise/morphe-patches"
         type: string
       max_parallel:
-        description: "Maximum parallel builds"
+        description: "Maximum parallel builds for free account"
         required: true
-        default: "6"
+        default: "20"
         type: string
       source_order:
         description: "APK resolver source order"
@@ -25,6 +25,7 @@ jobs:
   matrix:
     name: Prepare source build matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     outputs:
       build_ids: ${{ steps.matrix.outputs.build_ids }}
       count: ${{ steps.matrix.outputs.count }}
@@ -62,6 +63,7 @@ jobs:
     name: Build ${{ matrix.build_id }}
     needs: matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     continue-on-error: true
     strategy:
       fail-fast: false

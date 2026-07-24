@@ -16,9 +16,9 @@ on:
         default: "10"
         type: string
       max_parallel:
-        description: "Maximum parallel chunks"
+        description: "Maximum parallel builds for free account"
         required: true
-        default: "6"
+        default: "20"
         type: string
       source_order:
         description: "APK resolver source order"
@@ -30,6 +30,7 @@ jobs:
   matrix:
     name: Prepare build chunks
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     outputs:
       chunks: ${{ steps.matrix.outputs.chunks }}
       count: ${{ steps.matrix.outputs.count }}
@@ -80,6 +81,7 @@ jobs:
     name: Chunk ${{ matrix.chunk.index }}
     needs: matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(inputs.max_parallel) }}
