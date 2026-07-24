@@ -665,12 +665,13 @@ get_apk_chplay() {
 get_apk_auto() {
 	local pkg_name=$1 apk_name=$2
 	local pkg_type=${3:-apk} arch=${4:-all} dpi=${5:-"nodpi anydpi auto"} apk_types=${6:-"apk apkm xapk apks"}
+	local source_order=${7:-}
 
 	detect_version "$pkg_name"
 	local target_version="${version:-latest}"
 	green_log "[+] Auto resolving $apk_name [$pkg_name] version=${target_version}"
 
-	if bash "./src/build/helper/resolve-auto-apk.sh" "$pkg_name" "$target_version" "./download/$apk_name.apk" "$arch" "$dpi" "$apk_types"; then
+	if bash "./src/build/helper/resolve-auto-apk.sh" "$pkg_name" "$target_version" "./download/$apk_name.apk" "$arch" "$dpi" "$apk_types" "$source_order"; then
 		green_log "[+] Successfully resolved $apk_name"
 	else
 		red_log "[-] Failed to auto resolve $apk_name"
