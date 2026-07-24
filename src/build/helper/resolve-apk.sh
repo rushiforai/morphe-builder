@@ -537,6 +537,7 @@ dl_apkmirror() {
 	final_url=$($HTMLQ "a#download-link" --attribute href <<<"$html" 2>/dev/null | head -1) || true
 	[ -z "$final_url" ] && final_url=$(echo "$html" | grep -oP 'id="download-link"[^>]*href="\K[^"]+' | head -1) || true
 	[ -z "$final_url" ] && final_url=$(echo "$html" | grep -oP "href=['\"]\K[^'\"]*download\.php[^'\"]+" | head -1) || true
+	[ -z "$final_url" ] && final_url=$(echo "$html" | grep -oP "href=['\"]\K[^'\"]*/download/\?key=[^'\"]+" | sed 's/&amp;/\&/g' | head -1) || true
 	if [ -z "$final_url" ]; then
 		epr "Could not find final download link on APKMirror ($(page_hint "$html"))"
 		return 1
