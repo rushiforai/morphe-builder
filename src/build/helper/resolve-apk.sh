@@ -843,7 +843,7 @@ dl_apkcombo() {
 	fi
 
 	final_url=$(normalize_apkpure_proxy_url "$final_url")
-	if grep -Eiq '(^|[-_/])(x86_64|x86)([-_/.]|$)' <<<"$final_url"; then
+	if grep -Eiq '(^|[-_/.=&])(x86_64|x86)([-_/.=&]|$)' <<<"$final_url $dl_url $page_url ${version:-}"; then
 		epr "APKCombo selected unsupported x86 variant: $final_url"
 		return 1
 	fi
@@ -859,6 +859,12 @@ dl_apkcombo() {
 		"$final_url" -o "$output" || return 1
 	if ! unzip -t "$output" >/dev/null 2>&1; then
 		epr "Downloaded file from APKCombo is not a valid zip"
+		return 1
+	fi
+	local native_arches
+	native_arches=$(unzip -Z1 "$output" 2>/dev/null | sed -n 's#^lib/\([^/]*\)/.*#\1#p' | sort -u | tr '\n' ' ')
+	if [[ -n "$native_arches" && "$native_arches" != *"arm64-v8a"* && "$native_arches" != *"armeabi-v7a"* ]]; then
+		epr "APKCombo downloaded unsupported APK architecture only: $native_arches"
 		return 1
 	fi
 	if echo "$final_url$dl_url" | grep -qi 'xapk\|\.apks\|\.apkm'; then
@@ -1255,7 +1261,7 @@ latest_version() {
 			for attempt in $(seq 1 "$APKCOMBO_RETRIES"); do
 				__APKCOMBO_RESP__=""
 				get_apkcombo_resp "$url" || true
-				version=$(get_apkcombo_vers | head -n 1)
+				version=$(get_apkcombo_vers | grep -Eiv '(^|[-_/.])(x86_64|x86)([-_/.]|$)' | head -n 1)
 				if [ -n "$version" ]; then
 					echo "$version"
 					return 0

@@ -88,7 +88,7 @@ green_log "[+] Downloading patch bundle: $PATCHES_URL"
 curl -L --fail -s -S "$PATCHES_URL" -o "$PATCHES_FILE"
 
 APK_BASENAME="${ASSET_NAME%.apk}"
-get_apk_auto "$PACKAGE_NAME" "$APK_BASENAME" "apk" "$APK_ARCH" "$APK_DPI" "$APK_TYPES" "${APK_SOURCE_ORDER:-}"
+get_apk_auto "$PACKAGE_NAME" "$APK_BASENAME" "apk" "$APK_ARCH" "$APK_DPI" "$APK_TYPES" "${APK_SOURCE_ORDER:-}" || exit 1
 
 mapfile -t INCLUDED_PATCHES < "$PATCH_FILE"
 PATCH_ARGS=()
