@@ -146,8 +146,9 @@ jobs:
                 echo "Publish failed for $build_id" >&2
               fi
             else
+              status=$?
               failed=$((failed + 1))
-              echo "Build failed for $build_id" >&2
+              echo "Build failed for $build_id with exit code $status" >&2
             fi
             echo "::endgroup::"
           done
