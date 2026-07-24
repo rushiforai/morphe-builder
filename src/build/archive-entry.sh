@@ -68,6 +68,7 @@ dl_gh "morphe-desktop" "MorpheApp" "latest"
 
 BUNDLE_JSON="$WORK_DIR/patches-bundle.json"
 PATCHES_FILE="$WORK_DIR/patches.mpp"
+export PATCHES_FILE
 curl -L --fail -s -S "$SOURCE_URL" -o "$BUNDLE_JSON"
 
 PATCHES_URL=$(python - "$BUNDLE_JSON" <<'PY'
