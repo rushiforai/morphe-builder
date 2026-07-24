@@ -67,32 +67,22 @@ PYC
 }
 
 resolve_latest() {
-  local best_version="" best_source="" best_url="" source url latest key best_key=""
+  local source url latest
   for source in $source_order; do
     is_comparable_source "$source" || continue
     url=$(url_for_source "$source") || continue
     log "Resolving latest $package_name via $source"
     if latest=$(bash "$RESOLVER" latest "$source" "$url" | tail -n 1); then
       if [ -n "$latest" ]; then
-        key=$(version_key "$latest")
-        if [ -z "$best_version" ] || [[ "$key" > "$best_key" ]]; then
-          best_version="$latest"
-          best_source="$source"
-          best_url="$url"
-          best_key="$key"
-        fi
         log "$source latest: $latest"
+        printf '%s\t%s\t%s\n' "$latest" "$source" "$url"
+        return 0
       fi
     else
       warn "$source did not resolve a latest version"
     fi
   done
-
-  if [ -z "$best_version" ]; then
-    return 1
-  fi
-
-  printf '%s\t%s\t%s\n' "$best_version" "$best_source" "$best_url"
+  return 1
 }
 
 download_with_fallbacks() {
