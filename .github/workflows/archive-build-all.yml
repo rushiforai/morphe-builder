@@ -20,6 +20,11 @@ on:
         required: true
         default: "6"
         type: string
+      source_order:
+        description: "APK resolver source order"
+        required: true
+        default: "apkmirror uptodown apkpure apkcombo gplay"
+        type: string
 
 jobs:
   matrix:
@@ -92,6 +97,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_IDS_JSON: ${{ toJSON(matrix.chunk.build_ids) }}
+          APK_SOURCE_ORDER: ${{ inputs.source_order }}
         run: |
           set +e
           mapfile -t build_ids < <(python - <<'PY'

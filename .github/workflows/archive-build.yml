@@ -9,6 +9,11 @@ on:
         description: "Build id from src/archive/build-manifest.json"
         required: true
         type: string
+      source_order:
+        description: "APK resolver source order"
+        required: true
+        default: "apkmirror uptodown apkpure apkcombo gplay"
+        type: string
 
 jobs:
   build:
@@ -22,6 +27,8 @@ jobs:
         uses: ./.github/actions/preparing
 
       - name: Build archive entry
+        env:
+          APK_SOURCE_ORDER: ${{ inputs.source_order }}
         run: bash src/build/archive-entry.sh "${{ inputs.build_id }}"
 
       - name: Read release metadata
