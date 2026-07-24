@@ -6,12 +6,6 @@ The goal is simple: build the latest patchable APK for every app/source combinat
 
 ## What This Builds
 
-The archive currently tracks:
-
-- 103 patch sources
-- 508 supported apps
-- 645 app/source build combinations
-
 An app/source build combination means one app patched with one patch repository. If the same app is supported by multiple patch sources, each source gets its own APK asset name so Obtainium can track them separately.
 
 ## Build Flow
