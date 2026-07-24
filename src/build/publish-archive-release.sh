@@ -47,8 +47,6 @@ if app_name and app_name not in apps:
 
 print("# Morphe Archive build")
 print()
-print("This release contains successful APKs from one archive workflow run.")
-print()
 print("## Apps in this release")
 for index, app in enumerate(apps, 1):
     print(f"{index}. {app}")
