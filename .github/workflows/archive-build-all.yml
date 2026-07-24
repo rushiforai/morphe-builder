@@ -25,6 +25,24 @@ on:
         required: true
         default: "apkmirror uptodown apkpure apkcombo"
         type: string
+  workflow_call:
+    inputs:
+      source_repo:
+        required: false
+        default: "all"
+        type: string
+      chunk_size:
+        required: false
+        default: "10"
+        type: string
+      max_parallel:
+        required: false
+        default: "20"
+        type: string
+      source_order:
+        required: false
+        default: "apkmirror uptodown apkpure apkcombo"
+        type: string
 
 jobs:
   matrix:
