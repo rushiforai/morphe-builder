@@ -152,6 +152,15 @@ py() {
   fi
 }
 
+urlencode() {
+  py - "$1" <<'PYC'
+import sys
+import urllib.parse
+
+print(urllib.parse.quote_plus(sys.argv[1]))
+PYC
+}
+
 normalize_apk_types() {
   local raw="${1:-apk apkm xapk apks}" type
   raw="${raw//,/ }"
@@ -729,7 +738,7 @@ get_apkcombo_vers() {
 		echo "$__APKCOMBO_RESP__" | grep -oP 'Version:\s*\K.*?(?=\s+-\s+[A-Za-z0-9_.]+)' | sed 's/[[:space:]]*$//'
 		echo "$__APKCOMBO_RESP__" | grep -oP 'Version</[^>]+>\s*<[^>]+>\K[^<]+' || true
 		echo "$__APKCOMBO_RESP__" | grep -oP 'phone-\K[0-9][^-]+-apk' | sed 's/-apk$//'
-	} | sed '/^$/d' | head -1
+	} | sed '/^$/d' | awk '!seen[$0]++'
 }
 get_apkcombo_pkg_name() { echo "$__APKCOMBO_PKG__"; }
 dl_apkcombo() {
@@ -957,20 +966,30 @@ dl_uptodown() {
 get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$__UPTODOWN_RESP_PKG__"; }
 
 resolve_uptodown_search() {
-	local search_url="$1" package_name search_html candidate page pkg dl_html
+	local search_url="$1" package_name query search_html candidate pkg dl_html found_candidates=false
 	package_name=$(query_param "$search_url" query)
-	search_html=$(req "$search_url" -) || return 1
-	mapfile -t candidates < <(echo "$search_html" | grep -oP 'https://[a-z0-9-]+\.en\.uptodown\.com/android' | awk '!seen[$0]++' | head -20)
-	for candidate in "${candidates[@]}"; do
-		dl_html=$(req "${candidate%/}/download" -) || continue
-		pkg=$($HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$dl_html" | xargs) || true
-		if [ -n "$package_name" ] && [ "$pkg" = "$package_name" ]; then
-			pr "Uptodown search matched $package_name: $candidate"
-			echo "$candidate"
-			return 0
-		fi
+	local queries=("$package_name")
+	if [ -n "${APP_NAME:-}" ] && [ "$APP_NAME" != "$package_name" ]; then
+		queries+=("$APP_NAME")
+	fi
+
+	for query in "${queries[@]}"; do
+		[ -n "$query" ] || continue
+		search_html=$(req "https://en.uptodown.com/android/search?query=$(urlencode "$query")" -) || continue
+		mapfile -t candidates < <(echo "$search_html" | grep -oP 'https://[a-z0-9-]+\.en\.uptodown\.com/android' | awk '!seen[$0]++' | head -20)
+		[ "${#candidates[@]}" -gt 0 ] && found_candidates=true
+		for candidate in "${candidates[@]}"; do
+			dl_html=$(req "${candidate%/}/download" -) || continue
+			pkg=$($HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$dl_html" | xargs) || true
+			if [ -n "$package_name" ] && [ "$pkg" = "$package_name" ]; then
+				pr "Uptodown search matched $package_name with query '$query': $candidate"
+				echo "$candidate"
+				return 0
+			fi
+		done
 	done
-	if [ "${#candidates[@]}" -gt 0 ]; then
+
+	if [ "$found_candidates" = true ]; then
 		wpr "Uptodown search did not show an exact package match for ${package_name:-unknown}; skipping Uptodown"
 		return 1
 	fi

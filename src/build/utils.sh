@@ -671,7 +671,7 @@ get_apk_auto() {
 	local target_version="${version:-latest}"
 	green_log "[+] Auto resolving $apk_name [$pkg_name] version=${target_version}"
 
-	if bash "./src/build/helper/resolve-auto-apk.sh" "$pkg_name" "$target_version" "./download/$apk_name.apk" "$arch" "$dpi" "$apk_types" "$source_order"; then
+	if APP_NAME="${APP_NAME:-}" bash "./src/build/helper/resolve-auto-apk.sh" "$pkg_name" "$target_version" "./download/$apk_name.apk" "$arch" "$dpi" "$apk_types" "$source_order"; then
 		green_log "[+] Successfully resolved $apk_name"
 	else
 		red_log "[-] Failed to auto resolve $apk_name"
