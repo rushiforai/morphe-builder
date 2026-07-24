@@ -12,6 +12,107 @@ They are open-source scripts for patching various apps like YouTube, YouTube Mus
 
 ---
 
+## Morphe Builder
+
+Morphe Builder is intended to become the build backend for [Morphe Archive](https://github.com/rushiforai/morphe-archive). The archive lists community patch sources and supported apps; this repository builds patched APK releases for those app/source combinations.
+
+Current archive target:
+
+- 103 patch sources
+- 508 supported apps
+- 645 app/source build combinations, because some apps are supported by more than one patch source
+
+The builder should treat each app/source combination as its own build channel. For example, the same app patched from two different repositories should publish separately so update tools can tell them apart.
+
+## Obtainium Support Plan
+
+The archive website will link its **Install with Obtainium** button to releases from this repository. For that to work reliably, releases should not be mixed into one shared `all` release forever.
+
+Recommended release model:
+
+- Use one release tag per app/source channel.
+- Keep asset names stable inside each channel.
+- Include the package name and source slug in the release tag.
+- Publish only the APKs for that one app/source channel in that release.
+
+Suggested tag format:
+
+```text
+app-<package-name>-<source-owner>-<source-repo>
+```
+
+Suggested APK asset format:
+
+```text
+<app-slug>-<source-slug>.apk
+```
+
+This lets Obtainium track one app/source stream instead of comparing unrelated APKs from a giant shared release.
+
+## APK Resolver
+
+The builder includes a local APK resolver ported from `patches-tracker`. It can start from a package name, discover provider pages, resolve versions, and download APK/APKM/XAPK/APKS files from multiple providers.
+
+Resolver order:
+
+```text
+APKMirror -> Uptodown -> APKPure -> APKCombo -> Google Play fallback
+```
+
+The current builder can also try to detect the recommended app version from Morphe patch metadata before downloading. If no exact version is known, the resolver can ask comparable providers for their latest version and then try download fallbacks.
+
+Build scripts can use:
+
+```bash
+get_apk_auto "com.example.package" "output-name"
+```
+
+## Archive Manifest Builds
+
+Generate the builder manifest from Morphe Archive:
+
+```bash
+python scripts/generate_archive_manifest.py
+```
+
+By default this reads:
+
+```text
+https://raw.githubusercontent.com/rushiforai/morphe-archive/refs/heads/main/docs/data.json
+```
+
+This writes:
+
+```text
+src/archive/build-manifest.json
+```
+
+Build one app/source channel locally:
+
+```bash
+bash src/build/archive-entry.sh ai-metaverselabs-obdandroid-rushiranpise-morphe-patches
+```
+
+GitHub Actions also includes **Archive Build**, a manual workflow that accepts a `build_id` from the manifest and publishes that app/source APK to its own release tag.
+
+## Scaling Plan
+
+The safest direction is:
+
+1. Read `morphe-archive/docs/data.json` as the source of truth for apps, patch sources, versions, and patch names.
+2. Generate a builder manifest with one job per app/source combination.
+3. Use the local resolver to fetch stock APKs by package name.
+4. Publish each successful build to its own app/source release channel.
+5. Link Morphe Archive's Obtainium button to that channel.
+
+This keeps the website, builder, resolver, and Obtainium links aligned without manually maintaining APK metadata for every app.
+
+## Credits
+
+This repository is based on and inspired by [FiorenMas/Revanced-And-Revanced-Extended-Non-Root](https://github.com/FiorenMas/Revanced-And-Revanced-Extended-Non-Root). Full credit to the original project and author for the builder workflow this repository started from.
+
+---
+
 > [!NOTE]
 > ## Backup Telegram channel: 
 > ### [https://t.me/fiorenmas](https://t.me/fiorenmas)

@@ -1,0 +1,56 @@
+name: Archive Build
+
+permissions: write-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build id from src/archive/build-manifest.json"
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build archive app/source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Preparing to patch
+        uses: ./.github/actions/preparing
+
+      - name: Build archive entry
+        run: bash src/build/archive-entry.sh "${{ inputs.build_id }}"
+
+      - name: Read release metadata
+        id: meta
+        shell: bash
+        run: |
+          release_env=$(find .work/archive-build -name release.env | head -1)
+          if [ -z "$release_env" ]; then
+            echo "release.env not found" >&2
+            exit 1
+          fi
+          source "$release_env"
+          {
+            echo "tag=$RELEASE_TAG"
+            echo "asset=$ASSET_NAME"
+            echo "title=$APP_NAME - $SOURCE_REPO"
+            echo "body<<EOF"
+            echo "Package: $PACKAGE_NAME"
+            echo "Source: $SOURCE_WEB_URL"
+            echo "Build id: ${{ inputs.build_id }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish app/source release
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          artifacts: ./release/${{ steps.meta.outputs.asset }}
+          tag: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.title }}
+          body: ${{ steps.meta.outputs.body }}
+          allowUpdates: true
+          replacesArtifacts: true

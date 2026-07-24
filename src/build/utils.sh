@@ -662,6 +662,26 @@ get_apk_chplay() {
 	fi
 }
 
+get_apk_auto() {
+	local pkg_name=$1 apk_name=$2
+	local pkg_type=${3:-apk} arch=${4:-all} dpi=${5:-"nodpi anydpi auto"} apk_types=${6:-"apk apkm xapk apks"}
+
+	detect_version "$pkg_name"
+	local target_version="${version:-latest}"
+	green_log "[+] Auto resolving $apk_name [$pkg_name] version=${target_version}"
+
+	if bash "./src/build/helper/resolve-auto-apk.sh" "$pkg_name" "$target_version" "./download/$apk_name.apk" "$arch" "$dpi" "$apk_types"; then
+		green_log "[+] Successfully resolved $apk_name"
+	else
+		red_log "[-] Failed to auto resolve $apk_name"
+		return 1
+	fi
+
+	if [[ "$pkg_type" == "bundle_extract" ]]; then
+		unzip "./download/$apk_name.apk" -d "./download/$apk_name" > /dev/null 2>&1
+	fi
+}
+
 # Download files from Telegram channel/group
 # Required secret in github setting TDL_BACKUP base64 backup file from https://docs.iyear.me/tdl/more/cli/tdl_backup/
 # You must login your telegram (recommend use clone account) before backup https://docs.iyear.me/tdl/getting-started/quick-start/#login

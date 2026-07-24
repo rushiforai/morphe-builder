@@ -24,6 +24,20 @@ runs:
       with:
         distribution: 'zulu'
         java-version: '21'
+    - name: Install resolver tools
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq wget curl unzip zip aapt apktool
+        sudo apt-get install -y apksigner || true
+        if ! command -v htmlq >/dev/null 2>&1; then
+          curl -L --fail -o htmlq.tar.gz \
+            https://github.com/mgdm/htmlq/releases/latest/download/htmlq-x86_64-linux.tar.gz
+          sudo tar xf htmlq.tar.gz -C /usr/local/bin
+          sudo chmod +x /usr/local/bin/htmlq
+          rm -f htmlq.tar.gz
+        fi
+        python3 -m pip install -r src/build/helper/ggplay_dl/requirements.txt
     - name: Setup usque
       if: inputs.install_usque == 'true'
       shell: bash
