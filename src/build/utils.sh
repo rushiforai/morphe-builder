@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir ./release ./download
+mkdir -p ./release ./download
 
 #Setup pup for download apk files
 wget -q -O ./pup.zip https://github.com/ericchiang/pup/releases/download/v0.4.0/pup_v0.4.0_linux_amd64.zip
