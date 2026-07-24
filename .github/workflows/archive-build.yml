@@ -29,35 +29,17 @@ jobs:
       - name: Build archive entry
         env:
           APK_SOURCE_ORDER: ${{ inputs.source_order }}
+          RELEASE_TAG_OVERRIDE: archive-build-${{ github.run_number }}
         run: bash src/build/archive-entry.sh "${{ inputs.build_id }}"
 
-      - name: Read release metadata
-        id: meta
+      - name: Publish run release
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           release_env=$(find .work/archive-build -name release.env | head -1)
           if [ -z "$release_env" ]; then
             echo "release.env not found" >&2
             exit 1
           fi
-          source "$release_env"
-          {
-            echo "tag=$RELEASE_TAG"
-            echo "asset=$ASSET_NAME"
-            echo "title=$APP_NAME - $SOURCE_REPO"
-            echo "body<<EOF"
-            echo "Package: $PACKAGE_NAME"
-            echo "Source: $SOURCE_WEB_URL"
-            echo "Build id: ${{ inputs.build_id }}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Publish app/source release
-        uses: ncipollo/release-action@v1.21.0
-        with:
-          artifacts: ./release/${{ steps.meta.outputs.asset }}
-          tag: ${{ steps.meta.outputs.tag }}
-          name: ${{ steps.meta.outputs.title }}
-          body: ${{ steps.meta.outputs.body }}
-          allowUpdates: true
-          replacesArtifacts: true
+          bash src/build/publish-archive-release.sh "$release_env"

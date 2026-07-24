@@ -18,20 +18,32 @@ fi
 
 BODY_FILE="$(mktemp)"
 cat > "$BODY_FILE" <<EOF
-Package: $PACKAGE_NAME
-Source: $SOURCE_WEB_URL
-Build id: $ARCHIVE_BUILD_ID
+# Morphe Archive build
+
+This release contains successful APKs from one archive workflow run.
+
+Latest uploaded asset:
+- App: $APP_NAME
+- Package: $PACKAGE_NAME
+- Patch source: $SOURCE_WEB_URL
+- APK source: ${PATCHED_FROM_SOURCE:-unknown}
+- Build id: $ARCHIVE_BUILD_ID
 EOF
 
 if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
   gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
   gh release edit "$RELEASE_TAG" \
-    --title "$APP_NAME - $SOURCE_REPO" \
+    --title "$RELEASE_TAG" \
     --notes-file "$BODY_FILE"
 else
   gh release create "$RELEASE_TAG" "$ASSET_PATH" \
-    --title "$APP_NAME - $SOURCE_REPO" \
-    --notes-file "$BODY_FILE"
+    --title "$RELEASE_TAG" \
+    --notes-file "$BODY_FILE" || {
+      gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
+      gh release edit "$RELEASE_TAG" \
+        --title "$RELEASE_TAG" \
+        --notes-file "$BODY_FILE"
+    }
 fi
 
 rm -f "$BODY_FILE"

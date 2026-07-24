@@ -88,8 +88,6 @@ green_log "[+] Downloading patch bundle: $PATCHES_URL"
 curl -L --fail -s -S "$PATCHES_URL" -o "$PATCHES_FILE"
 
 APK_BASENAME="${ASSET_NAME%.apk}"
-get_apk_auto "$PACKAGE_NAME" "$APK_BASENAME" "apk" "$APK_ARCH" "$APK_DPI" "$APK_TYPES" "${APK_SOURCE_ORDER:-}" || exit 1
-
 mapfile -t INCLUDED_PATCHES < "$PATCH_FILE"
 PATCH_ARGS=()
 for patch_name in "${INCLUDED_PATCHES[@]}"; do
@@ -97,25 +95,52 @@ for patch_name in "${INCLUDED_PATCHES[@]}"; do
   PATCH_ARGS+=("-e" "$patch_name")
 done
 
-green_log "[+] Patching $APK_BASENAME -> release/$ASSET_NAME"
-java -jar morphe-desktop-*.jar patch \
-  -p "$PATCHES_FILE" \
-  --options-file "$OPTIONS_FILE" \
-  --out="./release/$ASSET_NAME" \
-  --keystore=./src/morphe.keystore \
-  --force \
-  --continue-on-error \
-  "${PATCH_ARGS[@]}" \
-  "./download/$APK_BASENAME.apk"
+SOURCE_ORDER="${APK_SOURCE_ORDER:-apkmirror uptodown apkpure apkcombo gplay}"
+PATCHED_FROM_SOURCE=""
+PATCH_LOG="$WORK_DIR/patch-attempts.log"
+: > "$PATCH_LOG"
+
+for apk_source in $SOURCE_ORDER; do
+  green_log "[+] Trying APK source: $apk_source"
+  rm -f "./download/$APK_BASENAME.apk" "./release/$ASSET_NAME"
+
+  if ! get_apk_auto "$PACKAGE_NAME" "$APK_BASENAME" "apk" "$APK_ARCH" "$APK_DPI" "$APK_TYPES" "$apk_source"; then
+    echo "Download failed from $apk_source" >> "$PATCH_LOG"
+    continue
+  fi
+
+  green_log "[+] Patching $APK_BASENAME from $apk_source -> release/$ASSET_NAME"
+  if java -jar morphe-desktop-*.jar patch \
+    -p "$PATCHES_FILE" \
+    --options-file "$OPTIONS_FILE" \
+    --out="./release/$ASSET_NAME" \
+    --keystore=./src/morphe.keystore \
+    --force \
+    --continue-on-error \
+    "${PATCH_ARGS[@]}" \
+    "./download/$APK_BASENAME.apk" >> "$PATCH_LOG" 2>&1 && [ -s "./release/$ASSET_NAME" ]; then
+    PATCHED_FROM_SOURCE="$apk_source"
+    break
+  fi
+
+  echo "Patch failed from $apk_source" >> "$PATCH_LOG"
+done
+
+if [ -z "$PATCHED_FROM_SOURCE" ]; then
+  echo "No APK source produced a patchable build for $ARCHIVE_BUILD_ID" >&2
+  cat "$PATCH_LOG" >&2
+  exit 1
+fi
 
 {
   printf 'ARCHIVE_BUILD_ID=%q\n' "$ARCHIVE_BUILD_ID"
-  printf 'RELEASE_TAG=%q\n' "$RELEASE_TAG"
+  printf 'RELEASE_TAG=%q\n' "${RELEASE_TAG_OVERRIDE:-$RELEASE_TAG}"
   printf 'ASSET_NAME=%q\n' "$ASSET_NAME"
   printf 'APP_NAME=%q\n' "$APP_NAME"
   printf 'PACKAGE_NAME=%q\n' "$PACKAGE_NAME"
   printf 'SOURCE_REPO=%q\n' "$SOURCE_REPO"
   printf 'SOURCE_WEB_URL=%q\n' "$SOURCE_WEB_URL"
+  printf 'PATCHED_FROM_SOURCE=%q\n' "$PATCHED_FROM_SOURCE"
 } > "$WORK_DIR/release.env"
 
-green_log "[+] Built ./release/$ASSET_NAME"
+green_log "[+] Built ./release/$ASSET_NAME from $PATCHED_FROM_SOURCE"

@@ -98,6 +98,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BUILD_IDS_JSON: ${{ toJSON(matrix.chunk.build_ids) }}
           APK_SOURCE_ORDER: ${{ inputs.source_order }}
+          RELEASE_TAG_OVERRIDE: archive-build-${{ github.run_number }}
         run: |
           set +e
           mapfile -t build_ids < <(python - <<'PY'

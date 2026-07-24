@@ -22,23 +22,23 @@ Current archive target:
 - 508 supported apps
 - 645 app/source build combinations, because some apps are supported by more than one patch source
 
-The builder should treat each app/source combination as its own build channel. For example, the same app patched from two different repositories should publish separately so update tools can tell them apart.
+The builder treats each app/source combination as its own APK asset. For example, the same app patched from two different repositories keeps separate asset names so update tools can tell them apart.
 
 ## Obtainium Support Plan
 
-The archive website will link its **Install with Obtainium** button to releases from this repository. For that to work reliably, releases should not be mixed into one shared `all` release forever.
+The archive website links its **Install with Obtainium** button to releases from this repository. Workflow runs publish successful APKs into one shared release for that run, while each app/source keeps a stable APK asset name.
 
 Recommended release model:
 
-- Use one release tag per app/source channel.
-- Keep asset names stable inside each channel.
-- Include the package name and source slug in the release tag.
-- Publish only the APKs for that one app/source channel in that release.
+- Use one release tag per workflow run.
+- Use the tag format `archive-build-${{ github.run_number }}`.
+- Keep asset names stable for each app/source channel.
+- Let Obtainium filter by exact APK asset name.
 
 Suggested tag format:
 
 ```text
-app-<package-name>-<source-owner>-<source-repo>
+archive-build-<github-run-number>
 ```
 
 Suggested APK asset format:
@@ -47,19 +47,19 @@ Suggested APK asset format:
 <app-slug>-<source-slug>.apk
 ```
 
-This lets Obtainium track one app/source stream instead of comparing unrelated APKs from a giant shared release.
+This lets one release contain many APKs while Obtainium still tracks one app/source stream by filename.
 
 ## APK Resolver
 
 The builder includes a local APK resolver ported from `patches-tracker`. It can start from a package name, discover provider pages, resolve versions, and download APK/APKM/XAPK/APKS files from multiple providers.
 
-Resolver order:
+Resolver source priority:
 
 ```text
 APKMirror -> Uptodown -> APKPure -> APKCombo -> Google Play fallback
 ```
 
-The current builder can also try to detect the recommended app version from Morphe patch metadata before downloading. If no exact version is known, the resolver can ask comparable providers for their latest version and then try download fallbacks.
+The current builder can also try to detect the recommended app version from Morphe patch metadata before downloading. If no exact version is known, the resolver asks each provider for its latest version. Within a source, architecture selection prefers universal/all builds, then `arm64-v8a`, then `armeabi-v7a`; unsupported x86-only APKs are skipped.
 
 Build scripts can use:
 
@@ -93,7 +93,7 @@ Build one app/source channel locally:
 bash src/build/archive-entry.sh ai-metaverselabs-obdandroid-rushiranpise-morphe-patches
 ```
 
-GitHub Actions also includes **Archive Build**, a manual workflow that accepts a `build_id` from the manifest and publishes that app/source APK to its own release tag.
+GitHub Actions also includes **Archive Build**, a manual workflow that accepts a `build_id` from the manifest and publishes that app/source APK to the run release.
 
 To build every app from one patch source, run **Archive Build Source** in GitHub Actions:
 
@@ -102,7 +102,7 @@ source_repo: rushiranpise/morphe-patches
 max_parallel: 6
 ```
 
-That creates one matrix job per app/source entry from the manifest. `rushiranpise/morphe-patches` currently resolves to 188 build jobs. Each job publishes its own release when it succeeds, and a failed app build does not stop the rest of the source from building.
+That creates one matrix job per app/source entry from the manifest. `rushiranpise/morphe-patches` currently resolves to 188 build jobs. Each successful job uploads its APK asset to the same `archive-build-${{ github.run_number }}` release, and a failed app build does not stop the rest of the source from building.
 
 To build all archive entries across every patch source, run **Archive Build All**:
 
@@ -112,7 +112,7 @@ chunk_size: 10
 max_parallel: 6
 ```
 
-This reads the same manifest, splits all app/source entries into chunks, and publishes each successful APK to the release channel used by the website's Obtainium links. You can also set `source_repo` to one repo, such as `rushiranpise/morphe-patches`, to run the same chunked flow for only that source.
+This reads the same manifest, splits all app/source entries into chunks, and uploads each successful APK to the release for that workflow run. You can also set `source_repo` to one repo, such as `rushiranpise/morphe-patches`, to run the same chunked flow for only that source.
 
 ## Scaling Plan
 
@@ -121,8 +121,8 @@ The safest direction is:
 1. Read `morphe-archive/docs/data.json` as the source of truth for apps, patch sources, versions, and patch names.
 2. Generate a builder manifest with one job per app/source combination.
 3. Use the local resolver to fetch stock APKs by package name.
-4. Publish each successful build to its own app/source release channel.
-5. Link Morphe Archive's Obtainium button to that channel.
+4. Publish each successful build as a stable APK asset in the run release.
+5. Link Morphe Archive's Obtainium button to the builder repo and filter by exact APK asset name.
 
 This keeps the website, builder, resolver, and Obtainium links aligned without manually maintaining APK metadata for every app.
 
