@@ -10,7 +10,7 @@ Usage:
   resolve-auto-apk.sh <package> <version|latest> <output.apk> [arch] [dpi] [apk-types] [source-order]
 
 Default source order:
-  apkmirror uptodown apkpure apkcombo gplay
+  apkmirror uptodown apkpure apkcombo
 
 Examples:
   resolve-auto-apk.sh com.discord latest ./download/discord.apk all "nodpi anydpi auto"
@@ -32,7 +32,7 @@ output="$3"
 arch="${4:-all}"
 dpi="${5:-nodpi anydpi auto}"
 apk_types="${6:-apk apkm xapk apks}"
-source_order="${7:-apkmirror uptodown apkpure apkcombo gplay}"
+source_order="${7:-apkmirror uptodown apkpure apkcombo}"
 
 url_for_source() {
   case "$1" in

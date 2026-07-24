@@ -95,7 +95,7 @@ for patch_name in "${INCLUDED_PATCHES[@]}"; do
   PATCH_ARGS+=("-e" "$patch_name")
 done
 
-SOURCE_ORDER="${APK_SOURCE_ORDER:-apkmirror uptodown apkpure apkcombo gplay}"
+SOURCE_ORDER="${APK_SOURCE_ORDER:-apkmirror uptodown apkpure apkcombo}"
 PATCHED_FROM_SOURCE=""
 PATCH_LOG="$WORK_DIR/patch-attempts.log"
 : > "$PATCH_LOG"

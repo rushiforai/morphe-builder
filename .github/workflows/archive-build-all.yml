@@ -23,7 +23,7 @@ on:
       source_order:
         description: "APK resolver source order"
         required: true
-        default: "apkmirror uptodown apkpure apkcombo gplay"
+        default: "apkmirror uptodown apkpure apkcombo"
         type: string
 
 jobs:

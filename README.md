@@ -86,7 +86,7 @@ Input:
 
 ```text
 build_id: com-google-android-apps-bard-ariecos-gemini-patches
-source_order: apkmirror uptodown apkpure apkcombo gplay
+source_order: apkmirror uptodown apkpure apkcombo
 ```
 
 ### Archive Build Source
@@ -98,7 +98,7 @@ Inputs:
 ```text
 source_repo: rushiranpise/morphe-patches
 max_parallel: 20
-source_order: apkmirror uptodown apkpure apkcombo gplay
+source_order: apkmirror uptodown apkpure apkcombo
 ```
 
 ### Archive Build All
@@ -111,7 +111,7 @@ Inputs:
 source_repo: all
 chunk_size: 10
 max_parallel: 20
-source_order: apkmirror uptodown apkpure apkcombo gplay
+source_order: apkmirror uptodown apkpure apkcombo
 ```
 
 Archive jobs use `timeout-minutes: 360`, the maximum GitHub-hosted job timeout.
