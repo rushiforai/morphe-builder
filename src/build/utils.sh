@@ -186,7 +186,7 @@ req() {
 }
 
 detect_version() {
-	if [ -z "$version" ] && [ "$lock_version" != "1" ]; then
+	if [ -z "${version:-}" ] && [ "${lock_version:-}" != "1" ]; then
 	  local jar_prefix="morphe-desktop-" patch_glob="*.mpp"
 
 	  if [[ $(ls "${jar_prefix}"*.jar 2>/dev/null) =~ ${jar_prefix}([0-9]+) ]]; then
