@@ -113,7 +113,7 @@ download_with_fallbacks() {
     if bash "$RESOLVER" "$source" "$url" "$wanted_version" "$output" "$arch" "$dpi" "$apk_types"; then
       return 0
     fi
-    warn "$source failed for $package_name $wanted_version"
+    warn "$source could not resolve $package_name $wanted_version; trying next source"
   done
 
   return 1

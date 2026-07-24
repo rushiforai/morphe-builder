@@ -319,6 +319,7 @@ get_apkmirror_resp() {
 	fi
 	_fs_get "$url" || return 1
 	__APKMIRROR_RESP__="$html"
+	__APKMIRROR_URL__="$url"
 	__APKMIRROR_CAT__="${url%/}"
 	__APKMIRROR_CAT__="${__APKMIRROR_CAT__##*/}"
 	__APKMIRROR_EXAMPLE_URL__="${apkmirror_example_url:-}"
@@ -461,7 +462,7 @@ dl_apkmirror() {
 		local apkmname
 		apkmname=$($HTMLQ "h1.marginZero" --text <<<"$__APKMIRROR_RESP__")
 		apkmname="${apkmname,,}" apkmname="${apkmname// /-}" apkmname="${apkmname//[^a-z0-9-]/}"
-		release_url="${url%/}/${apkmname}-${search_version}-release/"
+		release_url="${__APKMIRROR_URL__%/}/${apkmname}-${search_version}-release/"
 		_fs_get "$release_url" || true
 		resp="$html"
 		if [[ "$resp" == *"Page Not Found"* ]] || [[ "$resp" == *"404 Whoops"* ]] || [ -z "$resp" ]; then
