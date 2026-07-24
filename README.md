@@ -95,6 +95,25 @@ bash src/build/archive-entry.sh ai-metaverselabs-obdandroid-rushiranpise-morphe-
 
 GitHub Actions also includes **Archive Build**, a manual workflow that accepts a `build_id` from the manifest and publishes that app/source APK to its own release tag.
 
+To build every app from one patch source, run **Archive Build Source** in GitHub Actions:
+
+```text
+source_repo: rushiranpise/morphe-patches
+max_parallel: 6
+```
+
+That creates one matrix job per app/source entry from the manifest. `rushiranpise/morphe-patches` currently resolves to 188 build jobs. Each job publishes its own release when it succeeds, and a failed app build does not stop the rest of the source from building.
+
+To build all archive entries across every patch source, run **Archive Build All**:
+
+```text
+source_repo: all
+chunk_size: 10
+max_parallel: 6
+```
+
+This reads the same manifest, splits all app/source entries into chunks, and publishes each successful APK to the release channel used by the website's Obtainium links. You can also set `source_repo` to one repo, such as `rushiranpise/morphe-patches`, to run the same chunked flow for only that source.
+
 ## Scaling Plan
 
 The safest direction is:

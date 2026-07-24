@@ -1,0 +1,136 @@
+name: Archive Build All
+
+permissions: write-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "Patch source repo to build, or all"
+        required: true
+        default: "all"
+        type: string
+      chunk_size:
+        description: "Builds per matrix job"
+        required: true
+        default: "10"
+        type: string
+      max_parallel:
+        description: "Maximum parallel chunks"
+        required: true
+        default: "6"
+        type: string
+
+jobs:
+  matrix:
+    name: Prepare build chunks
+    runs-on: ubuntu-latest
+    outputs:
+      chunks: ${{ steps.matrix.outputs.chunks }}
+      count: ${{ steps.matrix.outputs.count }}
+      chunk_count: ${{ steps.matrix.outputs.chunk_count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Build chunk matrix
+        id: matrix
+        shell: bash
+        env:
+          SOURCE_REPO: ${{ inputs.source_repo }}
+          CHUNK_SIZE: ${{ inputs.chunk_size }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          from pathlib import Path
+
+          source_repo = os.environ["SOURCE_REPO"].strip()
+          chunk_size = int(os.environ["CHUNK_SIZE"])
+          if chunk_size < 1:
+              raise SystemExit("chunk_size must be at least 1")
+
+          manifest = json.loads(Path("src/archive/build-manifest.json").read_text(encoding="utf-8"))
+          builds = manifest.get("builds", [])
+          if source_repo.lower() != "all":
+              builds = [
+                  item for item in builds
+                  if item.get("sourceRepo", "").lower() == source_repo.lower()
+              ]
+
+          build_ids = [item["id"] for item in builds]
+          if not build_ids:
+              raise SystemExit(f"No builds found for source repo: {source_repo}")
+
+          chunks = [
+              {"index": index + 1, "build_ids": build_ids[start:start + chunk_size]}
+              for index, start in enumerate(range(0, len(build_ids), chunk_size))
+          ]
+          print(f"chunks={json.dumps(chunks)}")
+          print(f"count={len(build_ids)}")
+          print(f"chunk_count={len(chunks)}")
+          PY
+
+  build:
+    name: Chunk ${{ matrix.chunk.index }}
+    needs: matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix:
+        chunk: ${{ fromJSON(needs.matrix.outputs.chunks) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Preparing to patch
+        uses: ./.github/actions/preparing
+
+      - name: Build and publish chunk
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_IDS_JSON: ${{ toJSON(matrix.chunk.build_ids) }}
+        run: |
+          set +e
+          mapfile -t build_ids < <(python - <<'PY'
+          import json
+          import os
+
+          for build_id in json.loads(os.environ["BUILD_IDS_JSON"]):
+              print(build_id)
+          PY
+          )
+
+          total=0
+          passed=0
+          failed=0
+
+          for build_id in "${build_ids[@]}"; do
+            total=$((total + 1))
+            echo "::group::Build $build_id"
+            if bash src/build/archive-entry.sh "$build_id"; then
+              release_env=".work/archive-build/$build_id/release.env"
+              if bash src/build/publish-archive-release.sh "$release_env"; then
+                passed=$((passed + 1))
+              else
+                failed=$((failed + 1))
+                echo "Publish failed for $build_id" >&2
+              fi
+            else
+              failed=$((failed + 1))
+              echo "Build failed for $build_id" >&2
+            fi
+            echo "::endgroup::"
+          done
+
+          {
+            echo "### Archive build chunk ${{ matrix.chunk.index }}"
+            echo ""
+            echo "- Total: $total"
+            echo "- Passed: $passed"
+            echo "- Failed: $failed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit 0

@@ -1,0 +1,109 @@
+name: Archive Build Source
+
+permissions: write-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "Patch source repo from src/archive/build-manifest.json"
+        required: true
+        default: "rushiranpise/morphe-patches"
+        type: string
+      max_parallel:
+        description: "Maximum parallel builds"
+        required: true
+        default: "6"
+        type: string
+
+jobs:
+  matrix:
+    name: Prepare source build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      build_ids: ${{ steps.matrix.outputs.build_ids }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Build matrix
+        id: matrix
+        shell: bash
+        env:
+          SOURCE_REPO: ${{ inputs.source_repo }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          from pathlib import Path
+
+          source_repo = os.environ["SOURCE_REPO"]
+          manifest = json.loads(Path("src/archive/build-manifest.json").read_text(encoding="utf-8"))
+          build_ids = [
+              item["id"]
+              for item in manifest.get("builds", [])
+              if item.get("sourceRepo", "").lower() == source_repo.lower()
+          ]
+          if not build_ids:
+              raise SystemExit(f"No builds found for source repo: {source_repo}")
+          if len(build_ids) > 256:
+              raise SystemExit(f"{source_repo} has {len(build_ids)} builds; GitHub matrix limit is 256")
+          print(f"build_ids={json.dumps(build_ids)}")
+          print(f"count={len(build_ids)}")
+          PY
+
+  build:
+    name: Build ${{ matrix.build_id }}
+    needs: matrix
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix:
+        build_id: ${{ fromJSON(needs.matrix.outputs.build_ids) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Preparing to patch
+        uses: ./.github/actions/preparing
+
+      - name: Build archive entry
+        id: build
+        continue-on-error: true
+        run: bash src/build/archive-entry.sh "${{ matrix.build_id }}"
+
+      - name: Read release metadata
+        if: steps.build.outcome == 'success'
+        id: meta
+        shell: bash
+        run: |
+          release_env=$(find .work/archive-build -name release.env | head -1)
+          if [ -z "$release_env" ]; then
+            echo "release.env not found" >&2
+            exit 1
+          fi
+          source "$release_env"
+          {
+            echo "tag=$RELEASE_TAG"
+            echo "asset=$ASSET_NAME"
+            echo "title=$APP_NAME - $SOURCE_REPO"
+            echo "body<<EOF"
+            echo "Package: $PACKAGE_NAME"
+            echo "Source: $SOURCE_WEB_URL"
+            echo "Build id: ${{ matrix.build_id }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish app/source release
+        if: steps.build.outcome == 'success'
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          artifacts: ./release/${{ steps.meta.outputs.asset }}
+          tag: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.title }}
+          body: ${{ steps.meta.outputs.body }}
+          allowUpdates: true
+          replacesArtifacts: true

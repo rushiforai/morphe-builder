@@ -109,6 +109,7 @@ java -jar morphe-desktop-*.jar patch \
   "./download/$APK_BASENAME.apk"
 
 cat > "$WORK_DIR/release.env" <<EOF
+ARCHIVE_BUILD_ID=$ARCHIVE_BUILD_ID
 RELEASE_TAG=$RELEASE_TAG
 ASSET_NAME=$ASSET_NAME
 APP_NAME=$APP_NAME
