@@ -108,14 +108,14 @@ java -jar morphe-desktop-*.jar patch \
   "${PATCH_ARGS[@]}" \
   "./download/$APK_BASENAME.apk"
 
-cat > "$WORK_DIR/release.env" <<EOF
-ARCHIVE_BUILD_ID=$ARCHIVE_BUILD_ID
-RELEASE_TAG=$RELEASE_TAG
-ASSET_NAME=$ASSET_NAME
-APP_NAME=$APP_NAME
-PACKAGE_NAME=$PACKAGE_NAME
-SOURCE_REPO=$SOURCE_REPO
-SOURCE_WEB_URL=$SOURCE_WEB_URL
-EOF
+{
+  printf 'ARCHIVE_BUILD_ID=%q\n' "$ARCHIVE_BUILD_ID"
+  printf 'RELEASE_TAG=%q\n' "$RELEASE_TAG"
+  printf 'ASSET_NAME=%q\n' "$ASSET_NAME"
+  printf 'APP_NAME=%q\n' "$APP_NAME"
+  printf 'PACKAGE_NAME=%q\n' "$PACKAGE_NAME"
+  printf 'SOURCE_REPO=%q\n' "$SOURCE_REPO"
+  printf 'SOURCE_WEB_URL=%q\n' "$SOURCE_WEB_URL"
+} > "$WORK_DIR/release.env"
 
 green_log "[+] Built ./release/$ASSET_NAME"

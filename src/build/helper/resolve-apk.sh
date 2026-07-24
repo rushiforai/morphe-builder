@@ -341,10 +341,8 @@ resolve_apkmirror_search() {
 		fi
 	done
 	if [ "${#candidates[@]}" -gt 0 ]; then
-		page="https://www.apkmirror.com${candidates[0]}"
-		wpr "APKMirror search did not show an exact package match for ${package_name:-unknown}; using first result: $page"
-		echo "$page"
-		return 0
+		wpr "APKMirror search did not show an exact package match for ${package_name:-unknown}; skipping APKMirror"
+		return 1
 	fi
 	epr "APKMirror search did not find app candidates for ${package_name:-$search_url}"
 	return 1
@@ -959,10 +957,8 @@ resolve_uptodown_search() {
 		fi
 	done
 	if [ "${#candidates[@]}" -gt 0 ]; then
-		page="${candidates[0]}"
-		wpr "Uptodown search did not show an exact package match for ${package_name:-unknown}; using first result: $page"
-		echo "$page"
-		return 0
+		wpr "Uptodown search did not show an exact package match for ${package_name:-unknown}; skipping Uptodown"
+		return 1
 	fi
 	epr "Uptodown search did not find app candidates for ${package_name:-$search_url}"
 	return 1
