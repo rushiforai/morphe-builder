@@ -904,6 +904,9 @@ get_uptodown_resp() {
 	__UPTODOWN_RESP_PKG__=$(req "${url%/}/download" -) || return 1
 }
 get_uptodown_vers() { $HTMLQ --text ".version" <<<"$__UPTODOWN_RESP__"; }
+first_nonempty_line() {
+  sed '/^[[:space:]]*$/d' | sed -n '1p'
+}
 dl_uptodown() {
 	local uptodown_dlurl=$1 version=$2 output=$3 arch=$4 _dpi=$5
 	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
@@ -1263,39 +1266,39 @@ latest_version() {
 		github)
 			command -v jq >/dev/null || { epr "jq is required for github source"; return 1; }
 			get_github_resp "$url" || return 1
-			get_github_vers | head -n 1
+			first_nonempty_line <<<"$(get_github_vers)"
 			;;
 		archive)
 			get_archive_resp "$url" || return 1
-			get_archive_vers | sort -Vr | head -n 1
+			first_nonempty_line <<<"$(get_archive_vers | sort -Vr)"
 			;;
 		aoneroom)
 			command -v jq >/dev/null || { epr "jq is required for aoneroom source"; return 1; }
 			get_aoneroom_resp "$url" || return 1
-			get_aoneroom_vers "$url" | head -n 1
+			first_nonempty_line <<<"$(get_aoneroom_vers "$url")"
 			;;
 		apkmirror)
 			ensure_htmlq
 			get_apkmirror_resp "$url" || return 1
-			get_apkmirror_vers | tr ' ' '\n' | head -n 1
+			first_nonempty_line <<<"$(get_apkmirror_vers | tr ' ' '\n')"
 			;;
 		uptodown)
 			command -v jq >/dev/null || { epr "jq is required for uptodown source"; return 1; }
 			ensure_htmlq
 			get_uptodown_resp "$url" || return 1
-			get_uptodown_vers | head -n 1
+			first_nonempty_line <<<"$(get_uptodown_vers)"
 			;;
 		apkpure)
 			ensure_htmlq
 			get_apkpure_resp "$url" || return 1
-			get_apkpure_vers | head -n 1
+			first_nonempty_line <<<"$(get_apkpure_vers)"
 			;;
 		apkcombo)
 			local attempt version=""
 			for attempt in $(seq 1 "$APKCOMBO_RETRIES"); do
 				__APKCOMBO_RESP__=""
 				get_apkcombo_resp "$url" || true
-				version=$(get_apkcombo_vers | grep -Eiv '(^|[-_/.])(x86_64|x86)([-_/.]|$)' | head -n 1)
+				version=$(first_nonempty_line <<<"$(get_apkcombo_vers | grep -Eiv '(^|[-_/.])(x86_64|x86)([-_/.]|$)')")
 				if [ -n "$version" ]; then
 					echo "$version"
 					return 0
