@@ -36,6 +36,20 @@ source_order="${7:-apkmirror uptodown apkpure apkcombo}"
 
 url_for_source() {
   case "$1" in
+    aoneroom)
+      case "$package_name" in
+        com.community.oneroom)
+          printf 'https://h5-api.aoneroom.com/wefeed-h5api-bff/app/get-latest-app-pkgs?appName=moviebox&packageName=com.community.oneroom&channelType=CHANNEL_OWN\n'
+          ;;
+        com.community.mbox.in)
+          printf 'https://h5-api.aoneroom.com/wefeed-h5api-bff/app/get-latest-app-pkgs?appName=moviebox&packageName=com.community.mbox.in&channelType=CHANNEL_PLAMSTORE\n'
+          ;;
+        com.community.mbox.tv)
+          printf 'https://h5-api.aoneroom.com/wefeed-h5api-bff/app/get-latest-app-pkgs?appName=MovieBoxTV&packageName=com.community.mbox.tv&channelType=CHANNEL_OWN\n'
+          ;;
+        *) return 1 ;;
+      esac
+      ;;
     apkmirror) printf 'https://www.apkmirror.com/?post_type=app_release&searchtype=app&s=%s\n' "$package_name" ;;
     uptodown) printf 'https://en.uptodown.com/android/search?query=%s\n' "$package_name" ;;
     apkpure) printf 'https://apkpure.com/apk-info/%s\n' "$package_name" ;;
@@ -47,7 +61,7 @@ url_for_source() {
 
 is_comparable_source() {
   case "$1" in
-    apkmirror|uptodown|apkpure|apkcombo) return 0 ;;
+    aoneroom|apkmirror|uptodown|apkpure|apkcombo) return 0 ;;
     *) return 1 ;;
   esac
 }

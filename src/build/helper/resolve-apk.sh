@@ -1078,9 +1078,13 @@ get_aoneroom_vers() {
 	[ -z "$channel_type" ] && channel_type=$(query_param "$url" channel_type)
 	[ -z "$channel_type" ] && channel_type=CHANNEL_OWN
 	jq -r --arg package_name "$package_name" --arg channel_type "$channel_type" '
-		.data[]?
-		| select(.channelType == $channel_type)
-		| select(($package_name == "") or (.pkgName == $package_name))
+		[
+			.data[]?
+			| select(($package_name == "") or (.pkgName == $package_name))
+			| {score: (if .channelType == $channel_type then 0 else 1 end), versionName}
+		]
+		| sort_by(.score)
+		| .[]?
 		| .versionName
 	' <<<"$__AONEROOM_RESP__" | head -1
 }
@@ -1094,10 +1098,35 @@ get_aoneroom_download_url() {
 	[ -z "$channel_type" ] && channel_type=$(query_param "$url" channel_type)
 	[ -z "$channel_type" ] && channel_type=CHANNEL_OWN
 	jq -r --arg version "$version" --arg package_name "$package_name" --arg channel_type "$channel_type" '
-		.data[]?
-		| select(.channelType == $channel_type)
-		| select(($package_name == "") or (.pkgName == $package_name))
-		| select(.versionName == $version)
+		[
+			.data[]?
+			| select(($package_name == "") or (.pkgName == $package_name))
+			| select(.versionName == $version)
+			| {score: (if .channelType == $channel_type then 0 else 1 end), url}
+		]
+		| sort_by(.score)
+		| .[]?
+		| .url
+	' <<<"$__AONEROOM_RESP__" | head -1
+}
+get_aoneroom_latest_download_url() {
+	local url=$1 package_name channel_type
+	command -v jq >/dev/null || { epr "jq is required for aoneroom source"; return 1; }
+	package_name=$(query_param "$url" packageName)
+	[ -z "$package_name" ] && package_name=$(query_param "$url" package_name)
+	[ -z "$package_name" ] && package_name=$(query_param "$url" pkgName)
+	channel_type=$(query_param "$url" channelType)
+	[ -z "$channel_type" ] && channel_type=$(query_param "$url" channel_type)
+	[ -z "$channel_type" ] && channel_type=CHANNEL_OWN
+	jq -r --arg package_name "$package_name" --arg channel_type "$channel_type" '
+		[
+			.data[]?
+			| select(($package_name == "") or (.pkgName == $package_name))
+			| {score: (if .channelType == $channel_type then 0 else 1 end), versionName, url}
+		]
+		| sort_by(.score, .versionName)
+		| reverse
+		| .[]?
 		| .url
 	' <<<"$__AONEROOM_RESP__" | head -1
 }
@@ -1107,7 +1136,11 @@ dl_aoneroom() {
 	local dl_url
 	dl_url=$(get_aoneroom_download_url "$url" "$version")
 	if [ -z "$dl_url" ] || [ "$dl_url" = "null" ]; then
-		epr "Could not find Aoneroom official download for version $version"
+		wpr "Could not find Aoneroom official download for version $version; trying latest exact package"
+		dl_url=$(get_aoneroom_latest_download_url "$url")
+	fi
+	if [ -z "$dl_url" ] || [ "$dl_url" = "null" ]; then
+		epr "Could not find Aoneroom official download"
 		return 1
 	fi
 	pr "Downloading from Aoneroom official API: $dl_url"

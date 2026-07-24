@@ -96,6 +96,16 @@ for patch_name in "${INCLUDED_PATCHES[@]}"; do
 done
 
 SOURCE_ORDER="${APK_SOURCE_ORDER:-apkmirror uptodown apkpure apkcombo}"
+case " $SOURCE_ORDER " in
+  *" aoneroom "*) ;;
+  *)
+    case "$PACKAGE_NAME" in
+      com.community.oneroom|com.community.mbox.in|com.community.mbox.tv)
+        SOURCE_ORDER="aoneroom $SOURCE_ORDER"
+        ;;
+    esac
+    ;;
+esac
 PATCHED_FROM_SOURCE=""
 PATCH_LOG="$WORK_DIR/patch-attempts.log"
 : > "$PATCH_LOG"
