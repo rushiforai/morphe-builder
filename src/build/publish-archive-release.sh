@@ -25,48 +25,19 @@ if [ "$RELEASE_TITLE" = "$RELEASE_TAG" ] && [[ "$RELEASE_TAG" =~ ^archive-build-
 fi
 
 BODY_FILE="$(mktemp)"
-write_release_body() {
-  local existing_body="$1"
-  python - "$APP_NAME" "$existing_body" > "$BODY_FILE" <<'PY'
-import re
-import sys
-
-app_name = sys.argv[1].strip()
-existing = sys.argv[2]
-apps = []
-
-match = re.search(r"(?ms)^## Apps in this release\s*(.*?)(?:\n## |\Z)", existing)
-if match:
-    for line in match.group(1).splitlines():
-        item = re.sub(r"^\s*\d+\.\s*", "", line).strip()
-        if item:
-            apps.append(item)
-
-if app_name and app_name not in apps:
-    apps.append(app_name)
-
-print("# Morphe Archive build")
-print()
-print("## Apps in this release")
-for index, app in enumerate(apps, 1):
-    print(f"{index}. {app}")
-PY
-}
+# Write a static body without any app list
+echo "# Apps in this release" > "$BODY_FILE"
 
 if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-  existing_body=$(gh release view "$RELEASE_TAG" --json body --jq '.body // ""')
-  write_release_body "$existing_body"
   gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
   gh release edit "$RELEASE_TAG" \
     --title "$RELEASE_TITLE" \
     --notes-file "$BODY_FILE"
 else
-  write_release_body ""
   gh release create "$RELEASE_TAG" "$ASSET_PATH" \
     --title "$RELEASE_TITLE" \
     --notes-file "$BODY_FILE" || {
-      existing_body=$(gh release view "$RELEASE_TAG" --json body --jq '.body // ""')
-      write_release_body "$existing_body"
+      # If creation fails because release already exists, upload and edit
       gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
       gh release edit "$RELEASE_TAG" \
         --title "$RELEASE_TITLE" \
