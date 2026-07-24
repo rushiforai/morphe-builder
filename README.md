@@ -32,6 +32,8 @@ Recommended release model:
 
 - Use one release tag per workflow run.
 - Use the tag format `archive-build-${{ github.run_number }}`.
+- Use the visible release name `Build No. ${{ github.run_number }}`.
+- Keep release notes as a numbered `Apps in this release` list.
 - Keep asset names stable for each app/source channel.
 - Let Obtainium filter by exact APK asset name.
 
