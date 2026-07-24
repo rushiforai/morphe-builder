@@ -966,35 +966,50 @@ dl_uptodown() {
 get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$__UPTODOWN_RESP_PKG__"; }
 
 resolve_uptodown_search() {
-	local search_url="$1" package_name query search_html candidate pkg dl_html found_candidates=false
+	local search_url="$1" package_name search_html candidate pkg dl_html
 	package_name=$(query_param "$search_url" query)
-	local queries=("$package_name")
-	if [ -n "${APP_NAME:-}" ] && [ "$APP_NAME" != "$package_name" ]; then
-		queries+=("$APP_NAME")
-	fi
 
-	for query in "${queries[@]}"; do
-		[ -n "$query" ] || continue
-		search_html=$(req "https://en.uptodown.com/android/search?query=$(urlencode "$query")" -) || continue
-		mapfile -t candidates < <(echo "$search_html" | grep -oP 'https://[a-z0-9-]+\.en\.uptodown\.com/android' | awk '!seen[$0]++' | head -20)
-		[ "${#candidates[@]}" -gt 0 ] && found_candidates=true
+	search_html=$(req "$search_url" -) || return 1
+	mapfile -t candidates < <(echo "$search_html" | grep -oP 'https://[a-z0-9-]+\.en\.uptodown\.com/android' | awk '!seen[$0]++' | head -20)
+	for candidate in "${candidates[@]}"; do
+		dl_html=$(req "${candidate%/}/download" -) || continue
+		pkg=$($HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$dl_html" | xargs) || true
+		if [ -n "$package_name" ] && [ "$pkg" = "$package_name" ]; then
+			pr "Uptodown search matched $package_name: $candidate"
+			echo "$candidate"
+			return 0
+		fi
+	done
+
+	if [ -n "$package_name" ]; then
+		mapfile -t candidates < <(uptodown_package_site_search "$package_name")
 		for candidate in "${candidates[@]}"; do
 			dl_html=$(req "${candidate%/}/download" -) || continue
 			pkg=$($HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$dl_html" | xargs) || true
-			if [ -n "$package_name" ] && [ "$pkg" = "$package_name" ]; then
-				pr "Uptodown search matched $package_name with query '$query': $candidate"
+			if [ "$pkg" = "$package_name" ]; then
+				pr "Uptodown package lookup matched $package_name: $candidate"
 				echo "$candidate"
 				return 0
 			fi
 		done
-	done
+	fi
 
-	if [ "$found_candidates" = true ]; then
+	if [ "${#candidates[@]}" -gt 0 ]; then
 		wpr "Uptodown search did not show an exact package match for ${package_name:-unknown}; skipping Uptodown"
 		return 1
 	fi
 	epr "Uptodown search did not find app candidates for ${package_name:-$search_url}"
 	return 1
+}
+
+uptodown_package_site_search() {
+	local package_name="$1" search_html
+	search_html=$(req "https://www.bing.com/search?q=$(urlencode "site:uptodown.com/android/download \"$package_name\"")" -) || return 0
+	echo "$search_html" |
+		grep -oP 'https://[a-z0-9-]+\.en\.uptodown\.com/android/download' |
+		sed 's#/download$##' |
+		awk '!seen[$0]++' |
+		head -10
 }
 
 # -------------------- archive --------------------
