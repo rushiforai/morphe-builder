@@ -107,34 +107,56 @@ case " $SOURCE_ORDER " in
     ;;
 esac
 PATCHED_FROM_SOURCE=""
+PATCHED_VERSION_MODE=""
 PATCH_LOG="$WORK_DIR/patch-attempts.log"
 : > "$PATCH_LOG"
 
-for apk_source in $SOURCE_ORDER; do
-  green_log "[+] Trying APK source: $apk_source"
-  rm -f "./download/$APK_BASENAME.apk" "./release/$ASSET_NAME"
+detect_version "$PACKAGE_NAME"
+RECOMMENDED_VERSION="${version:-}"
+unset version
 
-  if ! get_apk_auto "$PACKAGE_NAME" "$APK_BASENAME" "apk" "$APK_ARCH" "$APK_DPI" "$APK_TYPES" "$apk_source"; then
-    echo "Download failed from $apk_source" >> "$PATCH_LOG"
-    continue
-  fi
+try_patch_sources() {
+  local target_version=$1 version_mode=$2 apk_source
+  version="$target_version"
+  lock_version=1
 
-  green_log "[+] Patching $APK_BASENAME from $apk_source -> release/$ASSET_NAME"
-  if java -jar morphe-desktop-*.jar patch \
-    -p "$PATCHES_FILE" \
-    --options-file "$OPTIONS_FILE" \
-    --out="./release/$ASSET_NAME" \
-    --keystore=./src/morphe.keystore \
-    --force \
-    --continue-on-error \
-    "${PATCH_ARGS[@]}" \
-    "./download/$APK_BASENAME.apk" >> "$PATCH_LOG" 2>&1 && [ -s "./release/$ASSET_NAME" ]; then
-    PATCHED_FROM_SOURCE="$apk_source"
-    break
-  fi
+  for apk_source in $SOURCE_ORDER; do
+    green_log "[+] Trying APK source: $apk_source ($version_mode)"
+    rm -f "./download/$APK_BASENAME.apk" "./release/$ASSET_NAME"
 
-  echo "Patch failed from $apk_source" >> "$PATCH_LOG"
-done
+    if ! get_apk_auto "$PACKAGE_NAME" "$APK_BASENAME" "apk" "$APK_ARCH" "$APK_DPI" "$APK_TYPES" "$apk_source"; then
+      echo "Download failed from $apk_source ($version_mode)" >> "$PATCH_LOG"
+      continue
+    fi
+
+    green_log "[+] Patching $APK_BASENAME from $apk_source ($version_mode) -> release/$ASSET_NAME"
+    if java -jar morphe-desktop-*.jar patch \
+      -p "$PATCHES_FILE" \
+      --options-file "$OPTIONS_FILE" \
+      --out="./release/$ASSET_NAME" \
+      --keystore=./src/morphe.keystore \
+      --force \
+      --continue-on-error \
+      "${PATCH_ARGS[@]}" \
+      "./download/$APK_BASENAME.apk" >> "$PATCH_LOG" 2>&1 && [ -s "./release/$ASSET_NAME" ]; then
+      PATCHED_FROM_SOURCE="$apk_source"
+      PATCHED_VERSION_MODE="$version_mode"
+      unset version lock_version
+      return 0
+    fi
+
+    echo "Patch failed from $apk_source ($version_mode)" >> "$PATCH_LOG"
+  done
+
+  unset version lock_version
+  return 1
+}
+
+try_patch_sources "latest" "latest" || true
+if [ -z "$PATCHED_FROM_SOURCE" ] && [ -n "$RECOMMENDED_VERSION" ]; then
+  green_log "[+] Latest failed from all sources; trying recommended version $RECOMMENDED_VERSION"
+  try_patch_sources "$RECOMMENDED_VERSION" "recommended:$RECOMMENDED_VERSION" || true
+fi
 
 if [ -z "$PATCHED_FROM_SOURCE" ]; then
   echo "No APK source produced a patchable build for $ARCHIVE_BUILD_ID" >&2
@@ -151,6 +173,7 @@ fi
   printf 'SOURCE_REPO=%q\n' "$SOURCE_REPO"
   printf 'SOURCE_WEB_URL=%q\n' "$SOURCE_WEB_URL"
   printf 'PATCHED_FROM_SOURCE=%q\n' "$PATCHED_FROM_SOURCE"
+  printf 'PATCHED_VERSION_MODE=%q\n' "$PATCHED_VERSION_MODE"
 } > "$WORK_DIR/release.env"
 
-green_log "[+] Built ./release/$ASSET_NAME from $PATCHED_FROM_SOURCE"
+green_log "[+] Built ./release/$ASSET_NAME from $PATCHED_FROM_SOURCE ($PATCHED_VERSION_MODE)"

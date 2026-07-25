@@ -17,9 +17,10 @@ Each build starts from one `build_id` in `src/archive/build-manifest.json`.
 3. Download the `.mpp` patch bundle from that JSON.
 4. Resolve the latest stock APK by package name.
 5. Patch the APK with only the patches listed for that app/source.
-6. Upload the successful APK to the current workflow-run release.
+6. If every latest APK source fails, retry the patch source's recommended compatible version.
+7. Upload the successful APK to the current workflow-run release.
 
-If a source downloads an APK but patching fails, the builder moves to the next APK source. It does not try every architecture as a patch matrix; architecture is only a preference while choosing an APK.
+If a source downloads an APK but patching fails, the builder moves to the next APK source. It tries latest first across the configured source order, then uses the recommended compatible version as the final rescue path. It does not try every architecture as a patch matrix; architecture is only a preference while choosing an APK.
 
 ## APK Source Priority
 
