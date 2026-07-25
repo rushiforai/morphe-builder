@@ -18,10 +18,10 @@ fi
 
 RELEASE_TITLE="${RELEASE_TITLE:-$RELEASE_TAG}"
 if [[ "$RELEASE_TAG" =~ ^archive-build-([0-9]+)$ ]]; then
-  RELEASE_TITLE="${RELEASE_TITLE:-Build No. ${BASH_REMATCH[1]}}"
+  RELEASE_TITLE="${RELEASE_TITLE:-New Release}"
 fi
 if [ "$RELEASE_TITLE" = "$RELEASE_TAG" ] && [[ "$RELEASE_TAG" =~ ^archive-build-([0-9]+)$ ]]; then
-  RELEASE_TITLE="Build No. ${BASH_REMATCH[1]}"
+  RELEASE_TITLE="New Release"
 fi
 
 BODY_FILE="$(mktemp)"
