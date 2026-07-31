@@ -3,12 +3,14 @@ name: 1. Manual Patch
 permissions: write-all
 
 on:
+  schedule:
+    - cron: "0 9 * * *"
   workflow_dispatch:
     inputs:
       source_repo:
         description: "Patch source repo from archive manifest, or all"
         required: true
-        default: "rushiranpise/morphe-patches"
+        default: "all"
         type: string
       chunk_size:
         description: "Builds per matrix job when source_repo is all"
