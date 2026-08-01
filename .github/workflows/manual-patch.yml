@@ -5,60 +5,77 @@ permissions: write-all
 on:
   schedule:
     - cron: "0 9 * * *"
+
   workflow_dispatch:
     inputs:
       source_repo:
         description: "Patch source repo from archive manifest, or all"
-        required: true
+        required: false
         default: "all"
         type: string
+
       chunk_size:
         description: "Builds per matrix job when source_repo is all"
-        required: true
+        required: false
         default: "10"
         type: string
+
       max_parallel:
         description: "Maximum parallel builds for free account"
-        required: true
+        required: false
         default: "20"
         type: string
+
       source_order:
         description: "APK resolver source order"
-        required: true
+        required: false
         default: "apkmirror uptodown apkpure apkcombo"
         type: string
+
   workflow_call:
     inputs:
       source_repo:
-        required: true
+        required: false
+        default: "all"
         type: string
+
       chunk_size:
         required: false
         default: "10"
         type: string
+
       max_parallel:
         required: false
         default: "20"
         type: string
+
       source_order:
         required: false
         default: "apkmirror uptodown apkpure apkcombo"
         type: string
 
+
 jobs:
   build-source:
-    if: ${{ inputs.source_repo != 'all' }}
+    if: github.event_name != 'schedule' && github.event.inputs.source_repo != 'all' && github.event.inputs.source_repo != ''
+
     uses: ./.github/workflows/archive-build-source.yml
+
     secrets: inherit
+
     with:
       source_repo: ${{ inputs.source_repo }}
       max_parallel: ${{ inputs.max_parallel }}
       source_order: ${{ inputs.source_order }}
 
+
   build-all:
-    if: ${{ inputs.source_repo == 'all' }}
+    if: github.event_name == 'schedule' || github.event.inputs.source_repo == 'all' || github.event.inputs.source_repo == ''
+
     uses: ./.github/workflows/archive-build-all.yml
+
     secrets: inherit
+
     with:
       source_repo: all
       chunk_size: ${{ inputs.chunk_size }}
