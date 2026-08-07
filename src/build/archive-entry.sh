@@ -111,6 +111,27 @@ PATCHED_VERSION_MODE=""
 PATCH_LOG="$WORK_DIR/patch-attempts.log"
 : > "$PATCH_LOG"
 
+apk_package_name() {
+  local apk_path=$1
+  aapt dump badging "$apk_path" 2>/dev/null |
+    sed -n "s/^package: name='\([^']*\)'.*/\1/p" |
+    head -n 1
+}
+
+package_matches_expected() {
+  local apk_path=$1 label=$2 actual_package
+  actual_package="$(apk_package_name "$apk_path")"
+  if [ -z "$actual_package" ]; then
+    echo "Could not read package name from $label: $apk_path" >> "$PATCH_LOG"
+    return 1
+  fi
+  if [ "$actual_package" != "$PACKAGE_NAME" ]; then
+    echo "Package mismatch for $label: expected $PACKAGE_NAME, got $actual_package" >> "$PATCH_LOG"
+    return 1
+  fi
+  return 0
+}
+
 detect_version "$PACKAGE_NAME"
 RECOMMENDED_VERSION="${version:-}"
 unset version
@@ -129,6 +150,10 @@ try_patch_sources() {
       continue
     fi
 
+    if ! package_matches_expected "./download/$APK_BASENAME.apk" "download from $apk_source ($version_mode)"; then
+      continue
+    fi
+
     green_log "[+] Patching $APK_BASENAME from $apk_source ($version_mode) -> release/$ASSET_NAME"
     if java -jar morphe-desktop-*.jar patch \
       -p "$PATCHES_FILE" \
@@ -139,6 +164,10 @@ try_patch_sources() {
       --continue-on-error \
       "${PATCH_ARGS[@]}" \
       "./download/$APK_BASENAME.apk" >> "$PATCH_LOG" 2>&1 && [ -s "./release/$ASSET_NAME" ]; then
+      if ! package_matches_expected "./release/$ASSET_NAME" "patched output from $apk_source ($version_mode)"; then
+        rm -f "./release/$ASSET_NAME"
+        continue
+      fi
       PATCHED_FROM_SOURCE="$apk_source"
       PATCHED_VERSION_MODE="$version_mode"
       unset version lock_version
