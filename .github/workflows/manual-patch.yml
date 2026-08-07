@@ -57,20 +57,26 @@ on:
 
 jobs:
   build-source:
-    if: github.event_name != 'schedule' && github.event.inputs.source_repo != 'all' && github.event.inputs.source_repo != ''
+    if: >
+      github.event_name != 'schedule' &&
+      inputs.source_repo != 'all' &&
+      inputs.source_repo != ''
 
     uses: ./.github/workflows/archive-build-source.yml
 
     secrets: inherit
 
     with:
-      source_repo: ${{ inputs.source_repo }}
-      max_parallel: ${{ inputs.max_parallel }}
-      source_order: ${{ inputs.source_order }}
+      source_repo: ${{ inputs.source_repo || 'all' }}
+      max_parallel: ${{ inputs.max_parallel || '20' }}
+      source_order: ${{ inputs.source_order || 'apkmirror uptodown apkpure apkcombo' }}
 
 
   build-all:
-    if: github.event_name == 'schedule' || github.event.inputs.source_repo == 'all' || github.event.inputs.source_repo == ''
+    if: >
+      github.event_name == 'schedule' ||
+      inputs.source_repo == 'all' ||
+      inputs.source_repo == ''
 
     uses: ./.github/workflows/archive-build-all.yml
 
@@ -78,6 +84,6 @@ jobs:
 
     with:
       source_repo: all
-      chunk_size: ${{ inputs.chunk_size }}
-      max_parallel: ${{ inputs.max_parallel }}
-      source_order: ${{ inputs.source_order }}
+      chunk_size: ${{ inputs.chunk_size || '10' }}
+      max_parallel: ${{ inputs.max_parallel || '20' }}
+      source_order: ${{ inputs.source_order || 'apkmirror uptodown apkpure apkcombo' }}
